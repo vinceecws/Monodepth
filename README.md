@@ -104,7 +104,12 @@ The KITTI Stereo Evaluation 2015 dataset can be downloaded here: http://www.cvli
 
 The stereo image pairs are pre-calibrated and rectified, so all that is needed is to re-structure the directory to the format that our dataloader requires, which is simply placing the downloaded KITTI dataset in the home directory of the repository. Basically, the training images will be placed at /KITTI/training, where /image_2 is the rectified and calibrated folder of the left images, while /image_3 is the corresponding folder for right images, where each image pair will share the same name in respective folders. (e.g. the left image, */KITTI/training/image_2/000000_10.jpg* corresponds to the right image, */KITTI/training/image_3/000000_10.jpg*).
 
+#### Training
 Once the dataset is downloaded and placed correctly, you can run the training script by doing ```python Train.py```
+
+#### Inference
 For inference on the KITTI testing dataset, you can do ```python Test.py```, and the corresponding disparity maps will be stored in */disparities/disparities.npy* as a numpy array file.
+
+#### Benchmarking
 To evaluate the results (i.e. predicted disparity vs. ground truth disparity), do ```python evaluate_kitti.py ./disparities/disparities.npy [ground truth disparity directory]```. Results will be printed in terms of the benchmarking scores presented by the original paper.
 
