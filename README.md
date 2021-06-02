@@ -23,7 +23,7 @@ The novelty of the approach lies in the fact that the authors solved a major cha
   Image from https://arxiv.org/pdf/1609.03677.pdf. The architecture of Monodepth featuring disparity prediction using monocular image, evaluated with its binocular counterpart during training.
 </p>
 
-Assuming rectified stereo image-pairs as input, the model feeds the left image (arbitrarily, right image also possible) into the neural network and produce two outputs: a left disparity map & a right disparity map. Using those, in principle, one would be, for example, be able to reproduce the right stereo image using the left stereo image plus the left disparity map, and vice versa. 
+Assuming rectified stereo image-pairs as input, the model feeds the left image (arbitrarily, right image also possible) into the neural network and produce two outputs: a left disparity map & a right disparity map. Using those, in principle, one would be, for example, be able to reproduce the right stereo image using the left stereo image plus the right disparity map, and vice versa. 
 
 The model enforces 3 losses for evaluation, and aggregates them during training:
 
@@ -34,7 +34,7 @@ The model enforces 3 losses for evaluation, and aggregates them during training:
   Image from https://arxiv.org/pdf/1609.03677.pdf. The appearance matching loss.
 </p>
 
-The appearance matching loss evaluates the reconstruction error using SSIM (Structural Similarity Index).
+The appearance matching loss evaluates the reconstruction error using SSIM (Structural Similarity Index). Reconstruction here means producing an approximation of the right image by applying the right disparity map to the left input image. 
 
 #### Disparity Smoothness
 <p align='center'>
@@ -52,5 +52,59 @@ The disparity smoothness loss ensures that the predicted disparities maintain pi
   Image from https://arxiv.org/pdf/1609.03677.pdf. The left-right consistency loss.
 </p>
 
-The left-right consistency loss forms the gist of the novel concept introduced in the paper. In essence, it evaluates the difference between the left disparity map and the *projected* right disparity map, and vice versa. This prompts the model to produce left and right disparity maps that are identical (as they should be), since in reality, there are no "left" or "right" disparity maps, but only one disparity map between any stereo image pairs. 
+The left-right consistency loss forms the gist of the novel concept introduced in the paper. In essence, it evaluates the difference between the left disparity map and the *projected* right disparity map, and vice versa. This prompts the model to produce left (with the *right* frame as reference) and right (with the *left* frame as reference) disparity maps that are identical. This is because, ideally, the left and right disparity maps are identical, barring any occlusions. 
+
+## Our Implementation
+
+Our implementation of the paper is wholly based on PyTorch, using the ImageNet pretrained ResNet-101 encoder provided natively for transfer learning. However, due to performance issues and resource constraints, we later regressed to the ResNet-50 as our encoder architecture of choice, using in-house implementation.
+
+<p align='center'>
+  <img width="600" alt="our implementation of monodepth" src="https://user-images.githubusercontent.com/19466657/120543208-1050db80-c3ba-11eb-9ff8-93a56129e733.png">
+  <br/>
+  Our initial model using ResNet-101 as the backbone encoder. Later replaced with our implementation of ResNet-50.
+</p>
+
+### Pre-processing and Training
+Intending to produce as close an implementation to the original paper as possible, we use the KITTI Stereo Evaluation 2015 dataset for both training and testing purposes. Image pre-processing is only limited to random gamma and brightness adjustments as well as random horizontal-axis flips to improve the model's ability to generalize well. 
+
+### Results
+Using TensorBoardX, we monitored the training of the model.
+
+Here, only the final attempt is shown, after several modifications to our implementation due to numerous bugs and theoretical inconsistencies with the original paper. 
+
+<p align='center'>
+  <img width="600" alt="training loss vs time" src="https://user-images.githubusercontent.com/19466657/120545016-1b0c7000-c3bc-11eb-91c9-a08c24b8fe85.png">
+  <br/>
+  The training progress of our final model.
+</p>
+
+The model seems to converge to a decent extent. However, the results proved to be problematic. 
+
+#### Inference
+<p align='center'>
+  <img width='500' alt="KITTI images" src="https://user-images.githubusercontent.com/19466657/120545194-59099400-c3bc-11eb-9e6a-819bc464494b.png"/>
+  <img width='500' alt="our model predictions" src="https://user-images.githubusercontent.com/19466657/120545200-5a3ac100-c3bc-11eb-9688-4c17ea02a28c.png"/>
+  <br/>
+  Left-side images from the KITTI Stereo Evaluation 2015 dataset vs. our model's depth prediction @ 23,200 iterations. Artifacts are apparent in certain parts of the predictions, showing disparity 0 at inappropriate areas.
+</p>
+
+#### Testing and Evaluation
+
+<p align='center'>
+  <img width='700' alt="KITTI images" src="https://user-images.githubusercontent.com/19466657/120545794-15635a00-c3bd-11eb-8de2-b9fb98518585.png"/>
+  <img width='700' alt="our model predictions" src="https://user-images.githubusercontent.com/19466657/120545807-185e4a80-c3bd-11eb-85a9-a6ddebb65164.png"/>
+  <br/>
+  Benchmarking results from the paper vs. our benchmarking results.
+</p>
+
+It is quite apparent that our results are going in the wrong direction. Such results can be due to a multitude of factors, even more so when it concerns deep learning. Possible factors could be: gradient explosion, vanishing gradients, theoretical inconsistencies with the original paper, implementation bug etc. Further post-mortem will be required to pinpoint the source of the issue(s).
+
+### Setup
+The KITTI Stereo Evaluation 2015 dataset can be downloaded here: http://www.cvlibs.net/datasets/kitti/eval_scene_flow.php?benchmark=stereo
+
+The stereo image pairs are pre-calibrated and rectified, so all that is needed is to re-structure the directory to the format that our dataloader requires, which is simply placing the downloaded KITTI dataset in the home directory of the repository. Basically, the training images will be placed at /KITTI/training, where /image_2 is the rectified and calibrated folder of the left images, while /image_3 is the corresponding folder for right images, where each image pair will share the same name in respective folders. (e.g. the left image, */KITTI/training/image_2/000000_10.jpg* corresponds to the right image, */KITTI/training/image_3/000000_10.jpg*).
+
+Once the dataset is downloaded and placed correctly, you can run the training script by doing ```python Train.py```
+For inference on the KITTI testing dataset, you can do ```python Test.py```, and the corresponding disparity maps will be stored in */disparities/disparities.npy* as a numpy array file.
+To evaluate the results (i.e. predicted disparity vs. ground truth disparity), do ```python evaluate_kitti.py ./disparities/disparities.npy [ground truth disparity directory]```. Results will be printed in terms of the benchmarking scores presented by the original paper.
 
