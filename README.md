@@ -52,5 +52,5 @@ The disparity smoothness loss ensures that the predicted disparities maintain pi
   Image from https://arxiv.org/pdf/1609.03677.pdf. The left-right consistency loss.
 </p>
 
-The left-right consistency loss forms the gist of the novel concept introduced in the paper. In essence, it evaluates the difference between the left disparity map and the *projected* left disparity map, and vice versa. This prompts the model to produce left and right disparity maps that are identical (as they should be), since in reality, there are no "left" or "right" disparity maps, but only one disparity map between any stereo image pairs. 
+The left-right consistency loss forms the gist of the novel concept introduced in the paper. In essence, it evaluates the difference between the left disparity map and the *projected* right disparity map, and vice versa. This prompts the model to produce left and right disparity maps that are identical (as they should be), since in reality, there are no "left" or "right" disparity maps, but only one disparity map between any stereo image pairs. 
 
